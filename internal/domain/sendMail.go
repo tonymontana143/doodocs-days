@@ -27,7 +27,6 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error loading .env file", http.StatusInternalServerError)
 		return
 	}
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -56,9 +55,12 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-}
 
+	w.Write([]byte("File uploaded and email sent successfully!"))
+}
 func sendEmail(to []string, fileName string, file multipart.File) error {
+	fmt.Println("Sending email to:", to)
+
 	auth := smtp.PlainAuth(
 		"",
 		os.Getenv("FROM_EMAIL"),
@@ -75,42 +77,47 @@ func sendEmail(to []string, fileName string, file multipart.File) error {
 	header["MIME-Version"] = "1.0"
 	header["Content-Type"] = fmt.Sprintf(`multipart/mixed; boundary="%s"`, boundary)
 
-	message := ""
+	var message strings.Builder
 	for k, v := range header {
-		message += fmt.Sprintf("%s: %s\r\n", k, v)
+		message.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
 	}
-	message += "\r\n"
+	message.WriteString("\r\n")
 
-	message += fmt.Sprintf("--%s\r\n", boundary)
-	message += "Content-Type: text/plain; charset=UTF-8\r\n\r\n"
-	message += "Please find the attached file.\r\n\r\n"
+	message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+	message.WriteString("Content-Type: text/plain; charset=UTF-8\r\n\r\n")
+	message.WriteString("Please find the attached file.\r\n\r\n")
 
-	message += fmt.Sprintf("--%s\r\n", boundary)
-	message += "Content-Type: application/octet-stream\r\n"
-	message += fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", fileName)
-	message += "Content-Transfer-Encoding: base64\r\n\r\n"
+	message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+	message.WriteString("Content-Type: application/octet-stream\r\n")
+	message.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", fileName))
+	message.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
 
 	buffer := make([]byte, 4096)
 	for {
 		n, err := file.Read(buffer)
 		if err != nil && err != io.EOF {
+			// Log error during file read
+			fmt.Println("Error reading file:", err)
 			return err
 		}
 		if n == 0 {
 			break
 		}
-		message += base64.StdEncoding.EncodeToString(buffer[:n])
-		message += "\r\n"
+		encoded := base64.StdEncoding.EncodeToString(buffer[:n])
+		message.WriteString(encoded + "\r\n")
 	}
 
-	message += fmt.Sprintf("--%s--\r\n", boundary)
+	message.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
 
-	return smtp.SendMail(
-
+	err := smtp.SendMail(
 		os.Getenv("SMTP_ADDR"),
 		auth,
 		os.Getenv("FROM_EMAIL"),
 		to,
-		[]byte(message),
+		[]byte(message.String()),
 	)
+	if err != nil {
+		fmt.Println("Failed to send email:", err)
+	}
+	return err
 }

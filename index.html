@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File and Send to Email</title>
+</head>
+
+<body>
+    <h2>Upload a File and Send it to an Email</h2>
+    <form action="/api/mail/file" method="POST" enctype="multipart/form-data">
+        <label for="emails">Enter Email(s) (comma separated):</label><br>
+        <input type="text" id="emails" name="emails" required><br><br>
+
+        <label for="file">Choose a file to upload:</label><br>
+        <input type="file" id="file" name="file" required><br><br>
+
+        <input type="submit" value="Send Email">
+    </form>
+
+    <hr>
+
+    <h2>Archive Information</h2>
+    <form action="/api/archive/information" method="POST" enctype="multipart/form-data">
+        <label for="archiveFile">Upload File to Archive:</label><br>
+        <input type="file" id="archiveFile" name="file" required><br><br>
+
+        <input type="submit" value="See Info">
+    </form>
+
+    <hr>
+    <h2>Upload Multiple Files</h2>
+    <form id="multipleFileUploadForm" action="/api/archive/create" method="POST" enctype="multipart/form-data">
+        <label for="files">Choose files to upload:</label><br>
+        <!-- Use the "multiple" attribute to allow multiple file selection -->
+        <input type="file" name="files[]" id="files" multiple required><br><br>
+
+        <input type="submit" value="Upload Files">
+    </form>
+
+    <hr>
+
+    <!-- This will show once the archive is created and ready for download -->
+    <p id="downloadMessage" style="display:none;">
+        Your archive is ready!
+        <a id="downloadLink" href="#" download="archive.zip">Click here to download the ZIP file</a>
+    </p>
+
+    <script>
+        const form = document.getElementById('multipleFileUploadForm');
+        const downloadMessage = document.getElementById('downloadMessage');
+        const downloadLink = document.getElementById('downloadLink');
+
+        form.onsubmit = function (event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const formData = new FormData(form);
+
+            fetch('/api/archive/create', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to create archive');
+                    }
+                    return response.blob();  // Get the ZIP file from the response
+                })
+                .then(blob => {
+                    // Create a URL for the ZIP file and update the download link
+                    const url = URL.createObjectURL(blob);
+                    downloadLink.href = url;
+                    downloadMessage.style.display = 'block';  // Show the download link
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+        };
+    </script>
+</body>
+
+</html>
