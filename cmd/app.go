@@ -17,7 +17,10 @@ func main() {
 	//create archive
 	createArchiveService := service.NewCreateArchiveService()
 	createArchiveHandler := handler.NewCreateArchiveHandler(createArchiveService)
-
+	//send fail to mails
+	sendMailService := service.NewSendMailService()
+	sendMailHandler := handler.NewSendMailHandler(sendMailService)
+	mux.HandleFunc("/api/mail/file", sendMailHandler.SendMail)
 	mux.HandleFunc("/api/archive/files", createArchiveHandler.CreateArchive)
 	mux.HandleFunc("/api/archive/information", archiveInfoHandler.ArchiveInfoHandle)
 
@@ -25,5 +28,4 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error during running server")
 	}
-
 }
