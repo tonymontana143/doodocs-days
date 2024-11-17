@@ -10,9 +10,17 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
-	archiveService := service.NewArchiveService()
-	archiveHandler := handler.NewFileHandler(archiveService)
-	mux.HandleFunc("/api/archive/information", archiveHandler.ArchiveInfoHandle)
+
+	//archive info
+	archiveInfoService := service.NewArchiveService()
+	archiveInfoHandler := handler.NewFileHandler(archiveInfoService)
+	//create archive
+	createArchiveService := service.NewCreateArchiveService()
+	createArchiveHandler := handler.NewCreateArchiveHandler(createArchiveService)
+
+	mux.HandleFunc("/api/archive/files", createArchiveHandler.CreateArchive)
+	mux.HandleFunc("/api/archive/information", archiveInfoHandler.ArchiveInfoHandle)
+
 	err := http.ListenAndServe(":8080", mux)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error during running server")
