@@ -2,14 +2,7 @@ package domain
 
 import (
 	"doodocs-days/internal/service"
-	"encoding/base64"
-	"fmt"
-	"io"
-	"mime/multipart"
 	"net/http"
-	"net/smtp"
-	"os"
-	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -33,6 +26,7 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	file, handler, err := r.FormFile("file")
+	files := r.MultipartForm.File["file"]
 	if err != nil {
 		http.Error(w, "Failed to get file from form data", http.StatusBadRequest)
 		return
@@ -51,73 +45,74 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sendEmail(emails, handler.Filename, file); err != nil {
+	if err := h.SendMailService.SendMails(emails, files); err != nil {
 		http.Error(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Write([]byte("File uploaded and email sent successfully!"))
 }
-func sendEmail(to []string, fileName string, file multipart.File) error {
-	fmt.Println("Sending email to:", to)
 
-	auth := smtp.PlainAuth(
-		"",
-		os.Getenv("FROM_EMAIL"),
-		os.Getenv("FROM_EMAIL_PASSWORD"),
-		os.Getenv("FROM_EMAIL_SMTP"),
-	)
+// func sendEmail(to []string, fileName string, file multipart.File) error {
+// 	fmt.Println("Sending email to:", to)
 
-	boundary := "my-boundary-123456"
+// 	auth := smtp.PlainAuth(
+// 		"",
+// 		os.Getenv("FROM_EMAIL"),
+// 		os.Getenv("FROM_EMAIL_PASSWORD"),
+// 		os.Getenv("FROM_EMAIL_SMTP"),
+// 	)
 
-	header := make(map[string]string)
-	header["From"] = os.Getenv("FROM_EMAIL")
-	header["To"] = strings.Join(to, ",")
-	header["Subject"] = "Attached File"
-	header["MIME-Version"] = "1.0"
-	header["Content-Type"] = fmt.Sprintf(`multipart/mixed; boundary="%s"`, boundary)
+// 	boundary := "my-boundary-123456"
 
-	var message strings.Builder
-	for k, v := range header {
-		message.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
-	}
-	message.WriteString("\r\n")
+// 	header := make(map[string]string)
+// 	header["From"] = os.Getenv("FROM_EMAIL")
+// 	header["To"] = strings.Join(to, ",")
+// 	header["Subject"] = "Attached File"
+// 	header["MIME-Version"] = "1.0"
+// 	header["Content-Type"] = fmt.Sprintf(`multipart/mixed; boundary="%s"`, boundary)
 
-	message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	message.WriteString("Content-Type: text/plain; charset=UTF-8\r\n\r\n")
-	message.WriteString("Please find the attached file.\r\n\r\n")
+// 	var message strings.Builder
+// 	for k, v := range header {
+// 		message.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
+// 	}
+// 	message.WriteString("\r\n")
 
-	message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	message.WriteString("Content-Type: application/octet-stream\r\n")
-	message.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", fileName))
-	message.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
+// 	message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+// 	message.WriteString("Content-Type: text/plain; charset=UTF-8\r\n\r\n")
+// 	message.WriteString("Please find the attached file.\r\n\r\n")
 
-	buffer := make([]byte, 4096)
-	for {
-		n, err := file.Read(buffer)
-		if err != nil && err != io.EOF {
-			// Log error during file read
-			fmt.Println("Error reading file:", err)
-			return err
-		}
-		if n == 0 {
-			break
-		}
-		encoded := base64.StdEncoding.EncodeToString(buffer[:n])
-		message.WriteString(encoded + "\r\n")
-	}
+// 	message.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+// 	message.WriteString("Content-Type: application/octet-stream\r\n")
+// 	message.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", fileName))
+// 	message.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
 
-	message.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
+// 	buffer := make([]byte, 4096)
+// 	for {
+// 		n, err := file.Read(buffer)
+// 		if err != nil && err != io.EOF {
+// 			// Log error during file read
+// 			fmt.Println("Error reading file:", err)
+// 			return err
+// 		}
+// 		if n == 0 {
+// 			break
+// 		}
+// 		encoded := base64.StdEncoding.EncodeToString(buffer[:n])
+// 		message.WriteString(encoded + "\r\n")
+// 	}
 
-	err := smtp.SendMail(
-		os.Getenv("SMTP_ADDR"),
-		auth,
-		os.Getenv("FROM_EMAIL"),
-		to,
-		[]byte(message.String()),
-	)
-	if err != nil {
-		fmt.Println("Failed to send email:", err)
-	}
-	return err
-}
+// 	message.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
+
+// 	err := smtp.SendMail(
+// 		os.Getenv("SMTP_ADDR"),
+// 		auth,
+// 		os.Getenv("FROM_EMAIL"),
+// 		to,
+// 		[]byte(message.String()),
+// 	)
+// 	if err != nil {
+// 		fmt.Println("Failed to send email:", err)
+// 	}
+// 	return err
+// }

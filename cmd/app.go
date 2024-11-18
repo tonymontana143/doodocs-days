@@ -1,9 +1,11 @@
 package main
 
 import (
+	"doodocs-days/internal/config"
 	handler "doodocs-days/internal/domain"
 	"doodocs-days/internal/service"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 )
@@ -11,7 +13,14 @@ import (
 func main() {
 	// Create a new HTTP ServeMux for routing
 	mux := http.NewServeMux()
+	conf, err := config.New()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
 
+	mailService := service.NewSendMailService(conf)
+	// Example usage or testing
+	fmt.Println("Configuration loaded successfully:", conf)
 	// Initialize ArchiveInfoService and its handler
 	archiveInfoService := service.NewArchiveService()
 	archiveInfoHandler := handler.NewFileHandler(archiveInfoService)
@@ -21,8 +30,7 @@ func main() {
 	createArchiveHandler := handler.NewCreateArchiveHandler(createArchiveService)
 
 	// Initialize SendMailService and its handler
-	sendMailService := service.NewSendMailService()
-	sendMailHandler := handler.NewSendMailHandler(sendMailService)
+	sendMailHandler := handler.NewSendMailHandler(mailService)
 
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
@@ -35,7 +43,7 @@ func main() {
 	})
 
 	fmt.Println("Server started on port 8080...")
-	err := http.ListenAndServe(":8080", mux)
+	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		os.Exit(1)
