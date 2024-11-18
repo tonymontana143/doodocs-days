@@ -19,8 +19,7 @@ func main() {
 	}
 
 	mailService := service.NewSendMailService(conf)
-	// Example usage or testing
-	fmt.Println("Configuration loaded successfully:", conf)
+	fmt.Println("Configuration loaded successfully:")
 	// Initialize ArchiveInfoService and its handler
 	archiveInfoService := service.NewArchiveService()
 	archiveInfoHandler := handler.NewFileHandler(archiveInfoService)
@@ -31,8 +30,6 @@ func main() {
 
 	// Initialize SendMailService and its handler
 	sendMailHandler := handler.NewSendMailHandler(mailService)
-
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	mux.HandleFunc("/api/mail/file", sendMailHandler.SendMail)
 	mux.HandleFunc("/api/archive/files", createArchiveHandler.CreateArchive)

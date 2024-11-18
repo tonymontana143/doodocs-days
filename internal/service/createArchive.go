@@ -31,15 +31,14 @@ func (s *createArchive) ValidateAndZipFiles(files []*multipart.FileHeader) (*byt
 		if err != nil {
 			return nil, fmt.Errorf("could not open file %s", fileHeader.Filename)
 		}
+		defer file.Close()
 
 		zipFileWriter, err := zipWriter.Create(fileHeader.Filename)
 		if err != nil {
-			file.Close() // Close immediately if there's an error
 			return nil, fmt.Errorf("failed to add file %s to archive", fileHeader.Filename)
 		}
 
 		_, err = io.Copy(zipFileWriter, file)
-		file.Close() // Close immediately after copying
 		if err != nil {
 			return nil, fmt.Errorf("failed to write file %s to archive", fileHeader.Filename)
 		}
