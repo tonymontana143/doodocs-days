@@ -33,7 +33,6 @@
     <h2>Upload Multiple Files</h2>
     <form id="multipleFileUploadForm" action="/api/archive/create" method="POST" enctype="multipart/form-data">
         <label for="files">Choose files to upload:</label><br>
-        <!-- Use the "multiple" attribute to allow multiple file selection -->
         <input type="file" name="files[]" id="files" multiple required><br><br>
 
         <input type="submit" value="Upload Files">
@@ -41,7 +40,6 @@
 
     <hr>
 
-    <!-- This will show once the archive is created and ready for download -->
     <p id="downloadMessage" style="display:none;">
         Your archive is ready!
         <a id="downloadLink" href="#" download="archive.zip">Click here to download the ZIP file</a>
@@ -53,7 +51,7 @@
         const downloadLink = document.getElementById('downloadLink');
 
         form.onsubmit = function (event) {
-            event.preventDefault(); // Prevent the default form submission
+            event.preventDefault();
 
             const formData = new FormData(form);
 
@@ -65,13 +63,12 @@
                     if (!response.ok) {
                         throw new Error('Failed to create archive');
                     }
-                    return response.blob();  // Get the ZIP file from the response
+                    return response.blob();
                 })
                 .then(blob => {
-                    // Create a URL for the ZIP file and update the download link
                     const url = URL.createObjectURL(blob);
                     downloadLink.href = url;
-                    downloadMessage.style.display = 'block';  // Show the download link
+                    downloadMessage.style.display = 'block';
                 })
                 .catch(error => {
                     alert('Error: ' + error.message);

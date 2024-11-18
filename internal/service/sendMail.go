@@ -39,9 +39,6 @@ func (s *SendMail) SendMails(emails []string, files []*multipart.FileHeader) err
 	e.Subject = "Your Subject Here"
 	e.Text = []byte("Please find the attached files.")
 
-	fmt.Println("Sending from:", e.From)
-	fmt.Println("Sending to:", e.To)
-
 	for _, file := range files {
 		fileContent, err := file.Open()
 		if err != nil {
@@ -65,7 +62,6 @@ func (s *SendMail) SendMails(emails []string, files []*multipart.FileHeader) err
 
 	// Send the email
 	serverAddress := fmt.Sprintf("%s:%s", s.conf.Host, s.conf.Port)
-	fmt.Println("SMTP server address:", serverAddress)
 
 	err := e.Send(serverAddress, auth)
 	if err != nil {
