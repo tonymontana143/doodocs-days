@@ -2,25 +2,34 @@ package domain
 
 import (
 	"doodocs-days/internal/service"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
 	"github.com/joho/godotenv"
 )
 
+// SendMailHandler handles requests for sending emails with attachments
 type SendMailHandler struct {
 	SendMailService service.SendMailService
 }
 
+// NewSendMailHandler creates a new instance of SendMailHandler
 func NewSendMailHandler(svc service.SendMailService) *SendMailHandler {
 	return &SendMailHandler{SendMailService: svc}
 }
 
+// SendMail handles sending emails with an attachment
 func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
 		slog.Error("Error loading .env file", "error", err)
-		http.Error(w, "Error loading .env file", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error:   "EnvLoadingError",
+			Message: "Error loading .env file",
+		})
 		return
 	}
 
@@ -29,7 +38,12 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		slog.Error("Invalid method", "method", r.Method)
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error:   "InvalidMethod",
+			Message: "Method Not Allowed",
+		})
 		return
 	}
 
@@ -37,7 +51,12 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		slog.Error("Failed to retrieve file from form data", "error", err)
-		http.Error(w, "Failed to get file from form data", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error:   "FileRetrievalError",
+			Message: "Failed to get file from form data",
+		})
 		return
 	}
 	defer file.Close()
@@ -46,12 +65,22 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	isValid, err := h.SendMailService.ValidateFile(handler)
 	if err != nil {
 		slog.Error("Error validating file", "filename", handler.Filename, "error", err)
-		http.Error(w, "File validation failed", http.StatusUnsupportedMediaType)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error:   "FileValidationError",
+			Message: "File validation failed",
+		})
 		return
 	}
 	if !isValid {
 		slog.Warn("Invalid file type", "filename", handler.Filename)
-		http.Error(w, "Incorrect type of file", http.StatusUnsupportedMediaType)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error:   "InvalidFileType",
+			Message: "Incorrect type of file",
+		})
 		return
 	}
 
@@ -59,7 +88,12 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	emails, ok := r.MultipartForm.Value["emails"]
 	if !ok || len(emails) == 0 {
 		slog.Warn("No email addresses provided in request")
-		http.Error(w, "No email addresses provided", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error:   "NoEmailsError",
+			Message: "No email addresses provided",
+		})
 		return
 	}
 
@@ -70,12 +104,21 @@ func (h *SendMailHandler) SendMail(w http.ResponseWriter, r *http.Request) {
 	files := r.MultipartForm.File["file"]
 	if err := h.SendMailService.SendMails(emails, files); err != nil {
 		slog.Error("Failed to send emails", "error", err)
-		http.Error(w, "Failed to send email: "+err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error:   "EmailSendingError",
+			Message: "Failed to send email: " + err.Error(),
+		})
 		return
 	}
 
 	// Log success
 	slog.Info("File uploaded and email sent successfully", "email_count", len(emails), "filename", handler.Filename)
 
-	w.Write([]byte("File uploaded and email sent successfully!"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "File uploaded and email sent successfully!",
+	})
 }
