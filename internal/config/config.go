@@ -16,7 +16,7 @@ type MailConfig struct {
 }
 
 func New() (MailConfig, error) {
-	err := godotenv.Load()
+	err := godotenv.Load(".env")
 	if err != nil {
 		return MailConfig{}, fmt.Errorf("failed to load environment file: %w", err)
 	}
