@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/smtp"
+	"strings"
 
 	"github.com/jordan-wright/email"
 )
@@ -28,11 +29,11 @@ func (s *SendMail) ValidateFile(file *multipart.FileHeader) (bool, error) {
 	return repository.IsValidMimeTypeForMail(file)
 }
 
-func (s *SendMail) SendMails(emails []string, files []*multipart.FileHeader) error {
-	if len(emails) == 0 {
+func (s *SendMail) SendMails(emailsOne []string, files []*multipart.FileHeader) error {
+	if len(emailsOne) == 0 {
 		return errors.New("no recipients specified")
 	}
-
+	emails := strings.Split(emailsOne[0], ",")
 	e := email.NewEmail()
 	e.From = s.conf.EmailSenderAddress
 	e.To = emails
